@@ -1,19 +1,10 @@
 import os
 import shutil
-import re
+import stat
 from appwrite.client import Client
 from appwrite.services.storage import Storage
 from appwrite.input_file import InputFile
 import yt_dlp
-
-# Download automatico di FFmpeg nel container Appwrite
-try:
-    from ffdl import ffmpeg_download
-    if not os.path.exists("/tmp/ffmpeg"):
-        ffmpeg_download(bin_dir="/tmp")
-        os.environ["PATH"] += os.pathsep + "/tmp"
-except Exception as e:
-    print(f"Errore FFmpeg: {e}")
 
 def main(context):
     req_data = context.req.body_json or context.req.query
@@ -28,25 +19,25 @@ def main(context):
         shutil.rmtree(download_dir)
     os.makedirs(download_dir, exist_ok=True)
 
-    # Percorso assoluto della cartella dello script
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Nome file aggiornato in 'youtube_cookies.txt'
     local_cookies = os.path.join(script_dir, "youtube_cookies.txt")
 
+    # Configurazione di yt-dlp per scaricare direttamente il miglior audio senza convertire
     ydl_opts = {
-        'format': 'bestaudio/best',
+        # Forza il download del formato audio migliore (es. itag 251 / Opus)
+        'format': 'bestaudio[ext=webm]/bestaudio',
         'outtmpl': f'{download_dir}/%(id)s.%(ext)s',
+        # Nessun postprocessor per FFmpeg (niente conversione in mp3)
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios', 'web']
+                'player_client': ['android', 'web']
             }
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
         }
     }
 
-    # Verifica se il file dei cookie esiste
     if os.path.exists(local_cookies):
         ydl_opts['cookiefile'] = local_cookies
         context.log(f"Cookie abilitati dal file: {local_cookies}")
@@ -58,10 +49,11 @@ def main(context):
             info = ydl.extract_info(youtube_url, download=True)
             video_id = info['id']
             video_title = info['title']
+            video_ext = info.get('ext', 'webm')  # Di solito sarà webm per l'itag 251
             
-            mp3_path = os.path.join(download_dir, f"{video_id}.mp3")
+            audio_path = os.path.join(download_dir, f"{video_id}.{video_ext}")
             
-            if not os.path.exists(mp3_path):
+            if not os.path.exists(audio_path):
                 return context.res.json({"status": "error", "message": "Estrazione fallita"}, 500)
 
             # Caricamento nello storage di Appwrite
@@ -74,14 +66,15 @@ def main(context):
             result = storage.create_file(
                 bucket_id=bucket_id,
                 file_id='unique()',
-                file=InputFile.from_path(mp3_path),
+                file=InputFile.from_path(audio_path),
             )
             
             return context.res.json({
                 "status": "success",
                 "fileId": result['$id'],
                 "bucketId": bucket_id,
-                "title": video_title
+                "title": video_title,
+                "format": video_ext
             })
 
     except Exception as e:
