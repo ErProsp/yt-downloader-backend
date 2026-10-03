@@ -22,14 +22,17 @@ def main(context):
     local_cookies = os.path.join(script_dir, "youtube_cookies.txt")
 
     # ydl_opts va definito QUI dentro, dopo che download_dir è stata dichiarata
+    # Configurazione ottimizzata per aggirare i blocchi cloud senza FFmpeg
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': f'{download_dir}/%(id)s.%(ext)s',
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'web']
+                # 'tv_embedded' e 'mweb' aggirano i blocchi di firma dei server cloud
+                'player_client': ['tv_embedded', 'mweb']
             }
         },
+        'geo_bypass': True,
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
         }
