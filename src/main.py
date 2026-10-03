@@ -29,7 +29,7 @@ def main(context):
     os.makedirs(download_dir, exist_ok=True)
 
     # Cerca il file dei cookie caricato insieme alla funzione
-    local_cookies = os.path.join(os.getcwd(), "cookies.txt")
+    local_cookies = os.path.join(os.getcwd(), "youtube_cookies.txt")
 
     ydl_opts = {
         'format': 'bestaudio/best',
