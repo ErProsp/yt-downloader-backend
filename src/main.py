@@ -36,13 +36,6 @@ def main(context):
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': f'{download_dir}/%(id)s.%(ext)s',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-        'ffmpeg_location': '/tmp',
-        # Tenta il ripiegamento su client mobile se la versione Web viene bloccata
         'extractor_args': {
             'youtube': {
                 'player_client': ['android', 'ios', 'web']
