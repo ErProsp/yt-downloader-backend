@@ -28,8 +28,10 @@ def main(context):
         shutil.rmtree(download_dir)
     os.makedirs(download_dir, exist_ok=True)
 
-    # Cerca il file dei cookie caricato insieme alla funzione
-    local_cookies = os.path.join(os.getcwd(), "youtube_cookies.txt")
+    # Percorso assoluto della cartella dello script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Nome file aggiornato in 'youtube_cookies.txt'
+    local_cookies = os.path.join(script_dir, "youtube_cookies.txt")
 
     ydl_opts = {
         'format': 'bestaudio/best',
@@ -40,18 +42,23 @@ def main(context):
             'preferredquality': '192',
         }],
         'ffmpeg_location': '/tmp',
-        # Configurazione User-Agent per simulare un browser reale insieme ai cookie
+        # Tenta il ripiegamento su client mobile se la versione Web viene bloccata
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'ios', 'web']
+            }
+        },
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
     }
 
-    # Se il file cookies.txt è presente, lo passa a yt-dlp
+    # Verifica se il file dei cookie esiste
     if os.path.exists(local_cookies):
         ydl_opts['cookiefile'] = local_cookies
-        context.log("Uso dei cookie rilevato ed abilitato.")
+        context.log(f"Cookie abilitati dal file: {local_cookies}")
     else:
-        context.log("ATTENZIONE: cookies.txt non trovato. Il download potrebbe fallire sui server cloud.")
+        context.log(f"ATTENZIONE: File cookie non trovato al percorso {local_cookies}")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
